@@ -16,7 +16,40 @@
             max-width: 100px;
             max-height: 100px;
         }
+        .pagination {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .pagination a {
+            margin: 0 5px;
+        }
+        .city-info {
+            position: absolute;
+            display: none;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
     </style>
+    <script>
+        $(document).ready(function() {
+            $("td.city").hover(function() {
+                var cityName = $(this).text();
+                $.ajax({
+                    url: "/get_city_info",
+                    data: { city: cityName },
+                    success: function(response) {
+                        var cityInfo = response.city_info;
+                        $("#city-info-popup").text(cityInfo);
+                        $("#city-info-popup").show();
+                    }
+                });
+            }, function() {
+                $("#city-info-popup").hide();
+            });
+        });
+    </script>
+
 </head>
 <body>
     <h1>Reviews</h1>
@@ -30,14 +63,31 @@
         {% for row in data %}
         <tr>
             {% for cell in row %}
-            {% if 'jpg' in cell %}
-            <td><img class="review-photo" src="{{ cell }}" alt="Review Photo"></td>
-            {% else %}
-            <td>{{ cell }}</td>
-            {% endif %}
+                {% if 'jpg' in cell %}
+                <td><img class="review-photo" src="{{ cell }}" alt="Review Photo"></td>
+                {% else %}
+                {% if loop.index == 2 %}
+                    <td class="city">{{ cell }}</td>
+                {% else %}
+                    <td>{{ cell }}</td>
+                {% endif %}
+                {% endif %}
             {% endfor %}
         </tr>
         {% endfor %}
     </table>
+
+    <div class="pagination">
+        {% if current_page > 1 %}
+            <a href="{{ url_for('reviews', page=current_page - 1) }}">Previous</a>
+        {% endif %}
+
+        Page {{ current_page }} of {{ total_pages }}
+
+        {% if current_page < total_pages %}
+            <a href="{{ url_for('reviews', page=current_page + 1) }}">Next</a>
+        {% endif %}
+    </div>
+    <div id="city-info-popup" class="city-info"></div>
 </body>
 </html>
