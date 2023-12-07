@@ -46,10 +46,9 @@ def reviews():
 @app.route('/get_city_info')
 def get_city_info():
     city_name = request.args.get('city')
-    print(city_name)
     city_info = ''
 
-    with open('data/city_info.csv', 'r') as file:
+    with open('data/us-cities.csv', 'r') as file:
         reader = csv.reader(file)
         next(reader)
         for row in reader:
