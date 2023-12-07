@@ -5,13 +5,18 @@
     <style>
         .center {
             text-align: center;
-            font-size: 48px;
+            font-size: 40px;
         }
         img {
             display: block;
             margin: 0 auto;
-            max-width: 500px;
+            max-width: 400px;
         }
+        .review{
+            align-items: center;
+            font-size: 48px;
+        }
+
     </style>
 </head>
 <body>
@@ -20,6 +25,6 @@
         <h2>{{ id }}</h2>
     </div>
     <img src="{{ photo_url }}" alt="Student Photo">
-    <a href="{{ url_for('reviews') }}">View Amazon-Reviews</a>
+    <a class="review" href="{{ url_for('reviews') }}">View Amazon-Reviews</a>
 </body>
 </html>
