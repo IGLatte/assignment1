@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reviews</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+        .review-photo {
+            max-width: 100px;
+            max-height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Reviews</h1>
+    <table>
+        <tr>
+            <th>{{ review_head[0] }}</th>
+            <th>{{ review_head[1] }}</th>
+            <th>{{ review_head[2] }}</th>
+            <th>{{ review_head[3] }}</th>
+        </tr>
+        {% for row in data %}
+        <tr>
+            {% for cell in row %}
+            {% if 'jpg' in cell %}
+            <td><img class="review-photo" src="{{ cell }}" alt="Review Photo"></td>
+            {% else %}
+            <td>{{ cell }}</td>
+            {% endif %}
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
