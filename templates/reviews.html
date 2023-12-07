@@ -26,15 +26,17 @@
         .city-info {
             position: absolute;
             display: none;
-            background-color: #f9f9f9;
+            background-color: rgba(115, 60, 18, 0.85);
             border: 1px solid #ddd;
             padding: 10px;
+            z-index: 999;
+            color: white;
         }
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function() {
-            $("td.city").hover(function() {
+            $("td.city").hover(function(e) {
                 var cityName = $(this).text();
                 $.ajax({
                     url: "/get_city_info",
@@ -42,12 +44,24 @@
                     success: function(response) {
                         var cityInfo = response.city_info;
                         $("#city-info-popup").text(cityInfo);
+                        positionPopup(e);
                         $("#city-info-popup").show();
                     }
                 });
             }, function() {
                 $("#city-info-popup").hide();
             });
+
+            function positionPopup(e) {
+                var popup = $("#city-info-popup");
+                var mouseX = e.pageX;
+                var mouseY = e.pageY;
+
+                popup.css({
+                    top: mouseY + 5,
+                    left: mouseX + 5
+                });
+            }
         });
     </script>
 
