@@ -70,7 +70,7 @@ def substitute_words():
 
 @app.route('/')
 def index():
-    return redirect(url_for('word'))
+    return render_template('hello.html')
 
 
 @app.route('/word')
