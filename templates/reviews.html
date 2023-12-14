@@ -67,42 +67,6 @@
 
 </head>
 <body>
-    <h1>Amazon-Reviews</h1>
-    <table>
-        <tr>
-            <th>{{ review_head[0] }}</th>
-            <th>{{ review_head[1] }}</th>
-            <th>{{ review_head[2] }}</th>
-            <th>{{ review_head[3] }}</th>
-        </tr>
-        {% for row in data %}
-        <tr>
-            {% for cell in row %}
-                {% if 'jpg' in cell %}
-                <td><img class="review-photo" src="{{ cell }}" alt="Review Photo"></td>
-                {% else %}
-                {% if loop.index == 2 %}
-                    <td class="city">{{ cell }}</td>
-                {% else %}
-                    <td>{{ cell }}</td>
-                {% endif %}
-                {% endif %}
-            {% endfor %}
-        </tr>
-        {% endfor %}
-    </table>
-
-    <div class="pagination">
-        {% if current_page > 1 %}
-            <a href="{{ url_for('reviews', page=current_page - 1) }}">Previous</a>
-        {% endif %}
-
-        Page {{ current_page }} of {{ total_pages }}
-
-        {% if current_page < total_pages %}
-            <a href="{{ url_for('reviews', page=current_page + 1) }}">Next</a>
-        {% endif %}
-    </div>
-    <div id="city-info-popup" class="city-info"></div>
+    <div>
 </body>
 </html>

@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template,redirect,url_for
+from flask import Flask, request, jsonify, render_template, redirect, url_for
 import pandas as pd
 
 app = Flask(__name__)
@@ -6,6 +6,7 @@ app = Flask(__name__)
 # Load data from CSV files
 reviews_data = pd.read_csv('data/amazon-reviews.csv')
 cities_data = pd.read_csv('data/us-cities.csv')
+
 
 def firstQuery(city_name, limit):
     if city_name:
@@ -18,6 +19,7 @@ def firstQuery(city_name, limit):
     popular_words = [{'term': word, 'popularity': count} for word, count in word_counts.head(limit).items()]
 
     return jsonify(popular_words)
+
 
 def popQuery(city_name, limit):
     city_population_dict = cities_data.set_index('city')['population'].to_dict()
@@ -36,7 +38,6 @@ def popQuery(city_name, limit):
             if i in row['review'] and not row['city'] in city_list:
                 city_list.append(row['city'])
                 word_counts_dict[i] = word_counts_dict[i] + city_population_dict[row['city']]
-
 
     show_words = dict(sorted(word_counts_dict.items(), key=lambda item: item[1], reverse=True)[:limit])
     popular_words = []
@@ -71,9 +72,10 @@ def substitute_words():
 def index():
     return redirect(url_for('word'))
 
+
 @app.route('/word')
 def word():
-    return render_template('word.html')
+    return render_template('index.html')
 
 
 if __name__ == '__main__':
