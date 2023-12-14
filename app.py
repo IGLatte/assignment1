@@ -1,7 +1,9 @@
 from flask import Flask, request, jsonify, render_template, redirect, url_for
+from flask_cors import CORS
 import pandas as pd
 
 app = Flask(__name__)
+CORS(app)
 
 # Load data from CSV files
 reviews_data = pd.read_csv('data/amazon-reviews.csv')
