@@ -53,7 +53,7 @@ def get_popular_words():
     isPop = request.args.get('pop')
 
     if isPop == 'population':
-        print("population !!!!")
+
         return popQuery(city_name, limit)
     return firstQuery(city_name, limit)
 
