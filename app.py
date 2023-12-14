@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template,redirect,url_for
 import pandas as pd
 
 app = Flask(__name__)
@@ -59,11 +59,9 @@ def get_popular_words():
 
 @app.route('/substitute_words', methods=['POST'])
 def substitute_words():
-    print('substitute_words !!!!')
     data = request.get_json()
     word = data['word']
     substitute = data['substitute']
-    print(type(word))
     affected_reviews = reviews_data['review'].str.contains(word).sum()
     # reviews_data['review'] = reviews_data['review'].str.replace(word, substitute)
     return jsonify({"affected_reviews": int(affected_reviews)})
@@ -71,7 +69,11 @@ def substitute_words():
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return redirect(url_for('word'))
+
+@app.route('/word')
+def word():
+    return render_template('word.html')
 
 
 if __name__ == '__main__':

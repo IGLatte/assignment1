@@ -4,16 +4,54 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Popular Words Query</title>
+    <style>
+       body {
+           font-family: Arial, sans-serif;
+           margin: 0;
+           padding: 0;
+           background-color: #f0f0f0;
+           display: flex;
+           flex-direction: column;
+           align-items: center;
+       }
+       h1, h2 {
+           color: #333;
+       }
+       .input-group, button, select {
+           margin: 10px 0;
+       }
+       .input-group {
+           display: flex;
+           justify-content: center;
+       }
+       .input-group input{
+           width: 50%;
+       }
+       #result {
+           margin-top: 20px;
+           border: 1px solid #ccc;
+           padding: 10px;
+           width: 50%;
+           word-break: break-all;
+       }
+
+       form {
+           display: flex;
+           flex-direction: column;
+           align-items: center;
+       }
+    </style>
 </head>
 <body>
-
     <h1>Popular Words Query</h1>
-
-    <label for="cityInput">City Name:</label>
-    <input type="text" id="cityInput" placeholder="Enter city name">
-
-    <label for="quantityInput">Quantity:</label>
-    <input type="number" id="quantityInput" placeholder="Enter quantity">
+    <div class="input-group">
+        <label for="cityInput">City Name:</label>
+        <input type="text" id="cityInput" placeholder="Enter city name">
+    </div>
+    <div class="input-group">
+        <label for="quantityInput">Quantity:</label>
+        <input type="number" id="quantityInput" placeholder="Enter quantity">
+    </div>
 
     <select id="queryType">
       <option value="simple_query">Simple Query</option>
@@ -25,11 +63,15 @@
     <h2>Substitute Words Form</h2>
 
     <form id="substituteForm">
-      <label for="word">Word:</label><br>
-      <input type="text" id="word" name="word"><br>
-      <label for="substitute">Substitute:</label><br>
-      <input type="text" id="substitute" name="substitute"><br><br>
-      <input type="submit" value="Submit">
+        <div class="input-group">
+            <label for="word">Word:</label><br>
+            <input type="text" id="word" name="word"><br>
+        </div>
+        <div class="input-group">
+            <label for="substitute">Substitute:</label><br>
+            <input type="text" id="substitute" name="substitute"><br><br>
+        </div>
+        <input type="submit" value="Submit">
     </form>
 
     <div id="result"></div>
