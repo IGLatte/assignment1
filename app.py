@@ -1,83 +1,175 @@
-from flask import Flask, request, jsonify, render_template, redirect, url_for
-from flask_cors import CORS
-import pandas as pd
+import re
+import math, time
+import numpy as np
+from flask import Flask, request, jsonify, render_template
+from azure.cosmos import CosmosClient
+from collections import Counter
+from sklearn.neighbors import NearestNeighbors
 
 app = Flask(__name__)
-CORS(app)
 
-# Load data from CSV files
-reviews_data = pd.read_csv('data/amazon-reviews.csv')
-cities_data = pd.read_csv('data/us-cities.csv')
+# Azure Cosmos DB 配置
+url = "https://tutorial-uta-cse6332.documents.azure.com:443/"
+key = "fSDt8pk5P1EH0NlvfiolgZF332ILOkKhMdLY6iMS2yjVqdpWx4XtnVgBoJBCBaHA8PIHnAbFY4N9ACDbMdwaEw=="
+client = CosmosClient(url, credential=key)
+database = client.get_database_client('tutorial')
+cities = database.get_container_client('us_cities')
+reviews = database.get_container_client('reviews')
 
-
-def firstQuery(city_name, limit):
-    if city_name:
-        reviews_in_city = reviews_data[reviews_data['city'] == city_name]
-    else:
-        reviews_in_city = reviews_data
-
-    word_counts = reviews_in_city['review'].str.split(expand=True).stack().value_counts()
-
-    popular_words = [{'term': word, 'popularity': count} for word, count in word_counts.head(limit).items()]
-
-    return jsonify(popular_words)
+# 加载停用词
+with open("data/stopwords.txt", "r", encoding="utf-8") as file:
+    stopwords = set(file.read().splitlines())
 
 
-def popQuery(city_name, limit):
-    city_population_dict = cities_data.set_index('city')['population'].to_dict()
-    if city_name:
-        reviews_in_city = reviews_data[reviews_data['city'] == city_name]
-    else:
-        reviews_in_city = reviews_data
+# 根据城市的名字，得到reviews中的单词列表
+def get_words_list(city_list, n):
+    counts = Counter()
+    pattern = r'\b[a-zA-Z]+\b'  # 匹配仅包含字母的单词的正则表达式
+    # 将符合条件的所有review整理成列表
+    review_query = f"SELECT reviews.review FROM reviews WHERE reviews.city = '{city_list[0]['city']}'"
+    for i in range(len(city_list)):
+        if i == 0:
+            continue
+        cityname = city_list[i]['city']
+        conditions = f" OR reviews.city = '{cityname}'"
+        review_query += conditions
+    review_items = list(reviews.query_items(review_query, enable_cross_partition_query=True))
 
-    word_counts = reviews_in_city['review'].str.split(expand=True).stack().value_counts()
-    word_counts[:] = 0
-    word_counts_dict = dict(word_counts)
+    # 统计列表中的所有word词频，过滤停用词
+    for review_item in review_items:
+        words = re.findall(pattern, review_item['review'].lower())
+        for word in words:
+            if word not in stopwords:
+                counts[word] += 1
+    sorted_counts = counts.most_common(n)
 
-    for i in word_counts_dict.keys():
-        city_list = []
-        for index, row in reviews_data.iterrows():
-            if i in row['review'] and not row['city'] in city_list:
-                city_list.append(row['city'])
-                word_counts_dict[i] = word_counts_dict[i] + city_population_dict[row['city']]
-
-    show_words = dict(sorted(word_counts_dict.items(), key=lambda item: item[1], reverse=True)[:limit])
-    popular_words = []
-    for i in show_words:
-        popular_words.append({'term': i, 'popularity': str(show_words[i])})
-    return jsonify(popular_words)
-
-
-@app.route('/popular_words', methods=['GET'])
-def get_popular_words():
-    city_name = request.args.get('city')
-    limit = int(request.args.get('limit'))
-    isPop = request.args.get('pop')
-
-    if isPop == 'population':
-
-        return popQuery(city_name, limit)
-    return firstQuery(city_name, limit)
+    return sorted_counts
 
 
-@app.route('/substitute_words', methods=['POST'])
-def substitute_words():
-    data = request.get_json()
-    word = data['word']
-    substitute = data['substitute']
-    affected_reviews = reviews_data['review'].str.contains(word).sum()
-    # reviews_data['review'] = reviews_data['review'].str.replace(word, substitute)
-    return jsonify({"affected_reviews": int(affected_reviews)})
+# 需求12
+def get_average_score(city_list):
+    weight = 0
+    population = 0
+    for i in range(len(city_list)):
+        cityname = city_list[i]['city']
+        weight_query = f"SELECT c.population FROM c WHERE c.city = '{cityname}'"
+        weight_items = list(cities.query_items(weight_query, enable_cross_partition_query=True))
+        score = 0
+        score_query = f"SELECT c.score FROM c WHERE c.city = '{cityname}'"
+        score_items = list(reviews.query_items(score_query, enable_cross_partition_query=True))
+        for score_item in score_items:
+            score += float(score_item['score'])
+        score /= len(score_items)
+        weight += score * float(weight_items[0]['population'])
+        population += float(weight_items[0]['population'])
+
+    return weight / population
+
+
+# 需求11
+@app.route('/data/knn_reviews', methods=['GET'])
+def get_knn_reviews():
+    try:
+        start_time = time.time()
+
+        # 获取请求参数
+        classes = int(request.args.get('classes'))
+        k = int(request.args.get('k'))
+        words = int(request.args.get('words'))
+
+        # 提取经纬度
+        city_query = 'SELECT c.city, c.lat, c.lng FROM c'
+        city_items = list(cities.query_items(city_query, enable_cross_partition_query=True))
+        city_coordinates = [(float(item['lat']), float(item['lng'])) for item in city_items]
+
+        # 计算欧氏距离矩阵
+        distances = np.linalg.norm(np.array(city_coordinates) - np.array(city_coordinates)[:, None], axis=-1)
+
+        # 使用kNN算法进行聚类
+        knn = NearestNeighbors(n_neighbors=k)
+        knn.fit(distances)
+        _, indices = knn.kneighbors()
+
+        result = {}
+        # 遍历每个类别
+        for i in range(classes):
+            # 这个类别中的城市列表
+            class_cities = [city_items[j] for j in indices[i]]
+
+            result['class_' + str(i + 1)] = {
+                'center_city': class_cities[0],
+                'cities': class_cities,
+                'most_popular_words': get_words_list(class_cities, words),
+                'weighted_average_score': get_average_score(class_cities)
+            }
+
+        # 计算响应时间
+        response_time = int((time.time() - start_time) * 1000)
+
+        return jsonify({
+            'result': result,
+            'response_time': response_time
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
+
+# 需求10
+@app.route('/stat/closest_cities', methods=['GET'])
+def closest_cities():
+    try:
+        city_name = request.args.get('city')
+        page_size = int(request.args.get('page_size', 50))
+        page = int(request.args.get('page', 0))
+
+        # 查询给定城市的经纬度信息
+        query = f"SELECT c.lat, c.lng FROM c WHERE c.city = '{str(city_name)}'"
+        result = list(cities.query_items(query, enable_cross_partition_query=True))
+
+        if not result:
+            return jsonify({"error": "City not found"}), 404
+
+        city_lat, city_lng = float(result[0]['lat']), float(result[0]['lng'])
+
+        # 计算与其他城市的欧拉距离保存并排序
+        query = f"SELECT c.city, c.lat, c.lng FROM c WHERE c.city != '{str(city_name)}'"
+        result = list(cities.query_items(query, enable_cross_partition_query=True))
+        closest_cities = sorted(result, key=lambda c: math.sqrt(
+            (float(c['lat']) - city_lat) ** 2 + (float(c['lng']) - city_lng) ** 2))
+        for city in closest_cities:
+            city['distance'] = math.sqrt((float(city['lat']) - city_lat) ** 2 + (float(city['lng']) - city_lng) ** 2)
+
+        # 分页
+        start_idx = page * page_size
+        end_idx = start_idx + page_size
+        paginated_cities = closest_cities[start_idx:end_idx]
+
+        # 计算响应时间
+        start_time = time.time()
+        response = {
+            "closest_cities": paginated_cities,
+            "response_time_ms": int((time.time() - start_time) * 1000)
+        }
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/')
+def welcome():
+    return render_template('welcome.html')
+
+
+@app.route('/index')
 def index():
-    return redirect(url_for('word'))
-
-
-@app.route('/word')
-def word():
     return render_template('index.html')
+
+
+@app.route('/review')
+def review():
+    return render_template('review.html')
 
 
 if __name__ == '__main__':

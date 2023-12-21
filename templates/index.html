@@ -3,117 +3,107 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Popular Words Query</title>
+    <title>Closest Cities App</title>
     <style>
-       body {
-           font-family: Arial, sans-serif;
-           margin: 0;
-           padding: 0;
-           background-color: #f0f0f0;
-           display: flex;
-           flex-direction: column;
-           align-items: center;
-       }
-       h1, h2 {
-           color: #333;
-       }
-       .input-group, button, select {
-           margin: 10px 0;
-       }
-       .input-group {
-           display: flex;
-           justify-content: center;
-       }
-       .input-group input{
-           width: 50%;
-       }
-       #result {
-           margin-top: 20px;
-           border: 1px solid #ccc;
-           padding: 10px;
-           width: 50%;
-           word-break: break-all;
-       }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+        }
 
-       form {
-           display: flex;
-           flex-direction: column;
-           align-items: center;
-       }
+        th, td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
     </style>
 </head>
 <body>
-    <h2>name1:Yang Heyu id_card:75979</h2>
-    <h2>name2:Zhang Kaibing id_card:75996</h2>
-    <h1>Popular Words Query</h1>
-    <div class="input-group">
-        <label for="cityInput">City Name:</label>
-        <input type="text" id="cityInput" placeholder="Enter city name">
-    </div>
-    <div class="input-group">
-        <label for="quantityInput">Quantity:</label>
-        <input type="number" id="quantityInput" placeholder="Enter quantity">
-    </div>
 
-    <select id="queryType">
-      <option value="simple_query">Simple Query</option>
-      <option value="population">Population</option>
-    </select>
-    <button onclick="queryPopularWords()">Query</button>
+    <h1>Closest Cities App</h1>
 
+    <label for="cityInput">Enter City:</label>
+    <input type="text" id="cityInput" placeholder="City Name">
 
-    <h1>Substitute Words Form</h1>
-
-    <form id="substituteForm">
-        <div class="input-group">
-            <label for="word">Word:</label><br>
-            <input type="text" id="word" name="word"><br>
-        </div>
-        <div class="input-group">
-            <label for="substitute">Substitute:</label><br>
-            <input type="text" id="substitute" name="substitute"><br><br>
-        </div>
-        <input type="submit" value="Submit">
-    </form>
+    <button onclick="getClosestCities()">Get Closest Cities</button>
 
     <div id="result"></div>
+    <div id="pagination">
+        <button onclick="prevPage()">Previous Page</button>
+        <button onclick="nextPage()">Next Page</button>
+    </div>
 
     <script>
-        async function queryPopularWords() {
-            const cityName = document.getElementById('cityInput').value;
-            const quantity = document.getElementById('quantityInput').value;
-            const isPop = document.getElementById('queryType').value;
+        let currentPage = 0;
 
-            try {
-                const response = await fetch(`/popular_words?city=${cityName}&limit=${quantity}&pop=${isPop}`);
-                const data = await response.json();
+        function getClosestCities() {
+            const cityInput = document.getElementById('cityInput');
+            const cityName = cityInput.value;
 
-                // Update the 'result' div with the response
-                document.getElementById('result').innerHTML = JSON.stringify(data, null, 2);
-            } catch (error) {
-                console.error('Error fetching popular words:', error);
+            // Replace with the URL of your RESTful API
+            const apiUrl = `http://127.0.0.1:5000/stat/closest_cities?city=${encodeURIComponent(cityName)}&page=${currentPage}&page_size=50`;
+
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    displayResult(data);
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                });
+        }
+
+        function displayResult(data) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '';
+
+            if (data.error) {
+                resultDiv.innerHTML = `<p>Error: ${data.error}</p >`;
+            } else {
+                resultDiv.innerHTML = `
+                    <p>Response Time: ${data.response_time_ms} ms</p>
+                    <h2>Closest Cities:</h2>
+                    <table>
+                        <tr>
+                            <th>City Name</th>
+                            <th>Latitude</th>
+                            <th>Longitude</th>
+                            <th>Distance</th>
+                        </tr>
+                        ${data.closest_cities.map(city => `
+                            <tr>
+                                <td>${city.city}</td>
+                                <td>${city.lat}</td>
+                                <td>${city.lng}</td>
+                                <td>${city.distance} km</td>
+                            </tr>`).join('')}
+                    </table>
+                `;
+            }
+            // Enable or disable pagination buttons based on data
+            const prevButton = document.getElementById('prevButton');
+            const nextButton = document.getElementById('nextButton');
+
+            prevButton.disabled = currentPage === 0;
+            nextButton.disabled = data.closest_cities.length < 50;
+        }
+
+        function prevPage() {
+            if (currentPage > 0) {
+                currentPage--;
+                getClosestCities();
             }
         }
 
-        document.getElementById('substituteForm').addEventListener('submit', function(event) {
-          event.preventDefault();
+        function nextPage() {
+            currentPage++;
+            getClosestCities();
+        }
 
-          let word = document.getElementById('word').value;
-          let substitute = document.getElementById('substitute').value;
-          let url = 'http://yhy2.azurewebsites.net/substitute_words';
-          let data = { "word": word, "substitute": substitute };
-
-          fetch(url, {
-            method: 'POST',
-            body: JSON.stringify(data),
-            headers:{
-              'Content-Type': 'application/json'
-            }
-          }).then(res => res.json())
-          .then(response => document.getElementById('result').textContent = 'Success: ' + JSON.stringify(response))
-          .catch(error => document.getElementById('result').textContent = 'Error: ' + error);
-        });
     </script>
-
 </body>
 </html>
