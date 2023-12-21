@@ -45,7 +45,7 @@
             const cityName = cityInput.value;
 
             // Replace with the URL of your RESTful API
-            const apiUrl = `http://127.0.0.1:5000/stat/closest_cities?city=${encodeURIComponent(cityName)}&page=${currentPage}&page_size=50`;
+            const apiUrl = `http://yhy2.azurewebsites.net/stat/closest_cities?city=${encodeURIComponent(cityName)}&page=${currentPage}&page_size=50`;
 
             fetch(apiUrl)
                 .then(response => response.json())
