@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KNN Reviews</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        h1, h2 {
+            text-align: center;
+        }
+
+        form {
+            text-align: center;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        input[type="number"] {
+            width: 150px;
+            padding: 5px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+        }
+
+        button[type="submit"] {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        #result-container {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f5f5f5;
+        }
+
+        pre {
+            background-color: #ffffff;
+            padding: 10px;
+            border: 1px solid #ccc;
+            overflow-x: auto;
+        }
+
+        #response-time {
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>KNN Reviews</h1>
+    <form id="knn-form">
+        <label for="classes">Classes:</label>
+        <input type="number" id="classes" name="classes" required><br><br>
+
+        <label for="k">K:</label>
+        <input type="number" id="k" name="k" required><br><br>
+
+        <label for="words">Words:</label>
+        <input type="number" id="words" name="words" required><br><br>
+
+        <button type="submit">Submit</button>
+    </form>
+
+    <div id="result-container" style="display: none;">
+        <h2>Results:</h2>
+        <div id="result"></div>
+        <p id="response-time"></p>
+    </div>
+
+    <script>
+        document.getElementById("knn-form").addEventListener("submit", function(event) {
+            event.preventDefault(); // Prevent form submission
+
+            var form = document.getElementById("knn-form");
+
+            var classes = form.elements["classes"].value;
+            var k = form.elements["k"].value;
+            var words = form.elements["words"].value;
+
+            var requestURL = "/data/knn_reviews?classes=" + classes + "&k=" + k + "&words=" + words;
+
+            var request = new XMLHttpRequest();
+            request.open("GET", requestURL, true);
+
+            request.onload = function() {
+                if (request.status >= 200 && request.status < 400) {
+                    var response = JSON.parse(request.responseText);
+                    displayResults(response);
+                } else {
+                    displayError("Error: " + request.status);
+                }
+            };
+
+            request.onerror = function() {
+                displayError("Request failed");
+            };
+
+            request.send();
+        });
+
+        function displayResults(response) {
+            var resultContainer = document.getElementById("result-container");
+            var resultDiv = document.getElementById("result");
+            var responseTime = document.getElementById("response-time");
+
+            resultDiv.innerHTML = "";
+
+            for (var key in response.result) {
+                if (response.result.hasOwnProperty(key)) {
+                    var classData = response.result[key];
+                    var classDiv = document.createElement("div");
+                    classDiv.style.marginBottom = "20px";
+
+                    var classHeader = document.createElement("h3");
+                    classHeader.textContent = "Class " + key.substring(6);
+                    classDiv.appendChild(classHeader);
+
+                    var centerCityHeader = document.createElement("h4");
+                    centerCityHeader.textContent = "Center City";
+                    classDiv.appendChild(centerCityHeader);
+
+                    var centerCityPre = document.createElement("pre");
+                    centerCityPre.textContent = JSON.stringify(classData.center_city, null, 2);
+                    classDiv.appendChild(centerCityPre);
+
+                    var citiesHeader = document.createElement("h4");
+                    citiesHeader.textContent = "Cities";
+                    classDiv.appendChild(citiesHeader);
+
+                    var citiesPre = document.createElement("pre");
+                    citiesPre.textContent = JSON.stringify(classData.cities, null, 2);
+                    classDiv.appendChild(citiesPre);
+
+                    var popularWordsHeader = document.createElement("h4");
+                    popularWordsHeader.textContent = "Most Popular Words";
+                    classDiv.appendChild(popularWordsHeader);
+
+                    var popularWordsPre = document.createElement("pre");
+                    popularWordsPre.textContent = JSON.stringify(classData.most_popular_words, null, 2);
+                    classDiv.appendChild(popularWordsPre);
+
+                    var weightedAverageHeader = document.createElement("h4");
+                    weightedAverageHeader.textContent = "Weighted Average Score";
+                    classDiv.appendChild(weightedAverageHeader);
+
+                    var weightedAveragePre = document.createElement("pre");
+                    weightedAveragePre.textContent = JSON.stringify(classData.weighted_average_score, null, 2);
+                    classDiv.appendChild(weightedAveragePre);
+
+                    resultDiv.appendChild(classDiv);
+                }
+            }
+
+            responseTime.textContent = "Response Time: " + response.response_time + " ms";
+
+            resultContainer.style.display = "block";
+        }
+
+        function displayError(message) {
+            var resultContainer = document.getElementById("result-container");
+            resultContainer.innerHTML = "<p>Error: " + message + "</p>";
+            resultContainer.style.display = "block";
+        }
+    </script>
+</body>
+</html>
