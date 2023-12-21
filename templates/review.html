@@ -85,7 +85,7 @@
             var k = form.elements["k"].value;
             var words = form.elements["words"].value;
 
-            var requestURL = "http://yhy2.azurewebsites.net/data/knn_reviews?classes=" + classes + "&k=" + k + "&words=" + words;
+            var requestURL = "/data/knn_reviews?classes=" + classes + "&k=" + k + "&words=" + words;
 
             var request = new XMLHttpRequest();
             request.open("GET", requestURL, true);
