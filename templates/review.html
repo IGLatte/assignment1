@@ -52,6 +52,11 @@
             text-align: center;
             margin-top: 10px;
         }
+
+        #used_cache {
+            text-align: center;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -70,9 +75,10 @@
     </form>
 
     <div id="result-container" style="display: none;">
+        <p id="response-time"></p>
+        <p id="used_cache"></p>
         <h2>Results:</h2>
         <div id="result"></div>
-        <p id="response-time"></p>
     </div>
 
     <script>
@@ -110,6 +116,7 @@
             var resultContainer = document.getElementById("result-container");
             var resultDiv = document.getElementById("result");
             var responseTime = document.getElementById("response-time");
+            var used_cache = document.getElementById("used_cache");
 
             resultDiv.innerHTML = "";
 
@@ -160,6 +167,7 @@
             }
 
             responseTime.textContent = "Response Time: " + response.response_time + " ms";
+            used_cache.textContent = "Used Cache: " + response.UsedCache;
 
             resultContainer.style.display = "block";
         }

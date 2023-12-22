@@ -45,7 +45,7 @@
             const cityName = cityInput.value;
 
             // Replace with the URL of your RESTful API
-            const apiUrl = `https://yhy2.azurewebsites.net/stat/closest_cities?city=${encodeURIComponent(cityName)}&page=${currentPage}&page_size=50`;
+            const apiUrl = `/stat/closest_cities?city=${encodeURIComponent(cityName)}&page=${currentPage}&page_size=50`;
 
             fetch(apiUrl)
                 .then(response => response.json())
@@ -66,6 +66,7 @@
             } else {
                 resultDiv.innerHTML = `
                     <p>Response Time: ${data.response_time_ms} ms</p>
+                    <p>Used Cache: ${data.cached}</p>
                     <h2>Closest Cities:</h2>
                     <table>
                         <tr>
@@ -79,7 +80,7 @@
                                 <td>${city.city}</td>
                                 <td>${city.lat}</td>
                                 <td>${city.lng}</td>
-                                <td>${city.distance} km</td>
+                                <td>${city.distance}</td>
                             </tr>`).join('')}
                     </table>
                 `;

@@ -1,12 +1,28 @@
 import re
 import math, time
 import numpy as np
+import redis
+import json
 from flask import Flask, request, jsonify, render_template
 from azure.cosmos import CosmosClient
 from collections import Counter
 from sklearn.neighbors import NearestNeighbors
+from flask_cors import CORS
+
+redis_passwd = "tuk2O44M3LfJIwJLYfI6td5qbbnCEdxHBAzCaMTiS5s="
+# "Host name" in properties
+redis_host = "yhyredis.redis.cache.windows.net"
+# SSL Port
+redis_port = 6380
+
+cache = redis.StrictRedis(
+            host=redis_host, port=redis_port,
+            db=0, password=redis_passwd,
+            ssl=True,
+        )
 
 app = Flask(__name__)
+CORS(app)
 
 # Azure Cosmos DB 配置
 url = "https://tutorial-uta-cse6332.documents.azure.com:443/"
@@ -15,6 +31,7 @@ client = CosmosClient(url, credential=key)
 database = client.get_database_client('tutorial')
 cities = database.get_container_client('us_cities')
 reviews = database.get_container_client('reviews')
+
 
 # 加载停用词
 with open("data/stopwords.txt", "r", encoding="utf-8") as file:
@@ -46,7 +63,7 @@ def get_words_list(city_list, n):
     return sorted_counts
 
 
-# 需求12
+# 需求11
 def get_average_score(city_list):
     weight = 0
     population = 0
@@ -77,39 +94,60 @@ def get_knn_reviews():
         k = int(request.args.get('k'))
         words = int(request.args.get('words'))
 
-        # 提取经纬度
-        city_query = 'SELECT c.city, c.lat, c.lng FROM c'
-        city_items = list(cities.query_items(city_query, enable_cross_partition_query=True))
-        city_coordinates = [(float(item['lat']), float(item['lng'])) for item in city_items]
+        cache_key = f"reviews:{classes}:{k}:{words}"
+        cached_data = cache.get(cache_key)
 
-        # 计算欧氏距离矩阵
-        distances = np.linalg.norm(np.array(city_coordinates) - np.array(city_coordinates)[:, None], axis=-1)
+        if cached_data:
+            # Data is in cache
+            result = json.loads(cached_data)
+            # 计算响应时间
+            response_time = int((time.time() - start_time) * 1000)
+            response = {
+                'result': result,
+                'response_time': response_time,
+                'UsedCache': True
+            }
+        else:
 
-        # 使用kNN算法进行聚类
-        knn = NearestNeighbors(n_neighbors=k)
-        knn.fit(distances)
-        _, indices = knn.kneighbors()
+            print(1)
+            # 提取经纬度
+            city_query = 'SELECT c.city, c.lat, c.lng FROM c'
+            city_items = list(cities.query_items(city_query, enable_cross_partition_query=True))
+            city_coordinates = [(float(item['lat']), float(item['lng'])) for item in city_items]
 
-        result = {}
-        # 遍历每个类别
-        for i in range(classes):
-            # 这个类别中的城市列表
-            class_cities = [city_items[j] for j in indices[i]]
+            # 计算欧氏距离矩阵
+            distances = np.linalg.norm(np.array(city_coordinates) - np.array(city_coordinates)[:, None], axis=-1)
 
-            result['class_' + str(i + 1)] = {
-                'center_city': class_cities[0],
-                'cities': class_cities,
-                'most_popular_words': get_words_list(class_cities, words),
-                'weighted_average_score': get_average_score(class_cities)
+            # 使用kNN算法进行聚类
+            knn = NearestNeighbors(n_neighbors=k)
+            knn.fit(distances)
+            _, indices = knn.kneighbors()
+
+            result = {}
+            # 遍历每个类别
+            for i in range(classes):
+                # 这个类别中的城市列表
+                class_cities = [city_items[j] for j in indices[i]]
+
+                result['class_' + str(i + 1)] = {
+                    'center_city': class_cities[0],
+                    'cities': class_cities,
+                    'most_popular_words': get_words_list(class_cities, words),
+                    'weighted_average_score': get_average_score(class_cities)
+                }
+
+            cache.setex(cache_key, 3600, json.dumps(result))
+
+            # 计算响应时间
+            response_time = int((time.time() - start_time) * 1000)
+
+            response = {
+                'result': result,
+                'response_time': response_time,
+                'UsedCache': False
             }
 
-        # 计算响应时间
-        response_time = int((time.time() - start_time) * 1000)
-
-        return jsonify({
-            'result': result,
-            'response_time': response_time
-        })
+        return jsonify(response)
     except Exception as e:
         return jsonify({'error': str(e)})
 
@@ -118,38 +156,56 @@ def get_knn_reviews():
 @app.route('/stat/closest_cities', methods=['GET'])
 def closest_cities():
     try:
+        # 计算响应时间
+        start_time = time.time()
+
         city_name = request.args.get('city')
         page_size = int(request.args.get('page_size', 50))
         page = int(request.args.get('page', 0))
 
-        # 查询给定城市的经纬度信息
-        query = f"SELECT c.lat, c.lng FROM c WHERE c.city = '{str(city_name)}'"
-        result = list(cities.query_items(query, enable_cross_partition_query=True))
+        cache_key = f"closest_cities:{city_name}:{page}:{page_size}"
+        cached_data = cache.get(cache_key)
 
-        if not result:
-            return jsonify({"error": "City not found"}), 404
+        if cached_data:
+            # Data is in cache
+            paginated_cities = json.loads(cached_data)
+            from_cache = True
+            response = {
+                "closest_cities": paginated_cities,
+                "response_time_ms": int((time.time() - start_time) * 1000),
+                "cached": from_cache
+            }
 
-        city_lat, city_lng = float(result[0]['lat']), float(result[0]['lng'])
+        else:
+            # 查询给定城市的经纬度信息
+            query = f"SELECT c.lat, c.lng FROM c WHERE c.city = '{str(city_name)}'"
+            result = list(cities.query_items(query, enable_cross_partition_query=True))
 
-        # 计算与其他城市的欧拉距离保存并排序
-        query = f"SELECT c.city, c.lat, c.lng FROM c WHERE c.city != '{str(city_name)}'"
-        result = list(cities.query_items(query, enable_cross_partition_query=True))
-        closest_cities = sorted(result, key=lambda c: math.sqrt(
-            (float(c['lat']) - city_lat) ** 2 + (float(c['lng']) - city_lng) ** 2))
-        for city in closest_cities:
-            city['distance'] = math.sqrt((float(city['lat']) - city_lat) ** 2 + (float(city['lng']) - city_lng) ** 2)
+            if not result:
+                return jsonify({"error": "City not found"}), 404
 
-        # 分页
-        start_idx = page * page_size
-        end_idx = start_idx + page_size
-        paginated_cities = closest_cities[start_idx:end_idx]
+            city_lat, city_lng = float(result[0]['lat']), float(result[0]['lng'])
 
-        # 计算响应时间
-        start_time = time.time()
-        response = {
-            "closest_cities": paginated_cities,
-            "response_time_ms": int((time.time() - start_time) * 1000)
-        }
+            # 计算与其他城市的欧拉距离保存并排序
+            query = f"SELECT c.city, c.lat, c.lng FROM c WHERE c.city != '{str(city_name)}'"
+            result = list(cities.query_items(query, enable_cross_partition_query=True))
+            closest_cities = sorted(result, key=lambda c: math.sqrt(
+                (float(c['lat']) - city_lat) ** 2 + (float(c['lng']) - city_lng) ** 2))
+            for city in closest_cities:
+                city['distance'] = math.sqrt((float(city['lat']) - city_lat) ** 2 + (float(city['lng']) - city_lng) ** 2)
+
+            # 分页
+            start_idx = page * page_size
+            end_idx = start_idx + page_size
+            paginated_cities = closest_cities[start_idx:end_idx]
+
+            cache.setex(cache_key, 3600, json.dumps(paginated_cities))
+
+            response = {
+                "closest_cities": paginated_cities,
+                "response_time_ms": int((time.time() - start_time) * 1000),
+                "cached": False
+            }
 
         return jsonify(response), 200
 
