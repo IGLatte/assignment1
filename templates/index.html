@@ -5,6 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Closest Cities App</title>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .center-align {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        label {
+            margin-right: 10px;
+        }
+
+        input[type="text"] {
+            width: 250px;
+            padding: 5px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        #result {
+            margin-top: 20px;
+        }
+
         table {
             border-collapse: collapse;
             width: 100%;
@@ -20,32 +58,89 @@
         th {
             background-color: #f2f2f2;
         }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        #pagination {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        #pagination button {
+            margin: 0 5px;
+        }
+
+        #pagination button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
 
     <h1>Closest Cities App</h1>
 
-    <label for="cityInput">Enter City:</label>
-    <input type="text" id="cityInput" placeholder="City Name">
+    <div class="center-align">
+        <label for="cityInput">Enter City:</label>
+        <input type="text" id="cityInput" placeholder="City Name">
+        <label for="pageInput">Enter Page Size:</label>
+        <input type="text" id="pageInput" placeholder="Page Size">
+        <button onclick="getClosestCities()">Get Closest Cities</button>
+    </div>
 
-    <button onclick="getClosestCities()">Get Closest Cities</button>
+    <div class="button-container">
+        <button id="clear-cache">Flush Cache</button>
+    </div>
+
 
     <div id="result"></div>
     <div id="pagination">
-        <button onclick="prevPage()">Previous Page</button>
-        <button onclick="nextPage()">Next Page</button>
+        <button id="prevButton" onclick="prevPage()">Previous Page</button>
+        <button id="nextButton" onclick="nextPage()">Next Page</button>
     </div>
 
     <script>
+        document.getElementById("clear-cache").addEventListener("click", function () {
+            clearCache();
+        })
+
+        function clearCache() {
+            var request = new XMLHttpRequest();
+            request.open("GET", "/clear_cache", true); // 发送清除缓存请求的 URL
+
+            request.onload = function() {
+                if (request.status >= 200 && request.status < 400) {
+                    // 清除缓存成功
+                    alert("Cache cleared successfully.");
+                } else {
+                    // 清除缓存失败
+                    alert("Failed to clear cache.");
+                }
+            };
+
+            request.onerror = function() {
+                // 请求错误
+                alert("Request failed");
+            };
+
+            request.send();
+        }
+
         let currentPage = 0;
+        let pageSize = 50;
 
         function getClosestCities() {
             const cityInput = document.getElementById('cityInput');
-            const cityName = cityInput.value;
+            const pageInput = document.getElementById('pageInput');
+            var cityName = cityInput.value;
+            pageSize = parseInt(pageInput.value)
 
             // Replace with the URL of your RESTful API
-            const apiUrl = `/stat/closest_cities?city=${encodeURIComponent(cityName)}&page=${currentPage}&page_size=50`;
+            const apiUrl = `/stat/closest_cities?city=${encodeURIComponent(cityName)}&page=${currentPage}&page_size=${pageSize}`;
 
             fetch(apiUrl)
                 .then(response => response.json())
@@ -89,8 +184,9 @@
             const prevButton = document.getElementById('prevButton');
             const nextButton = document.getElementById('nextButton');
 
+            // 在获取结果前禁用分页按钮
             prevButton.disabled = currentPage === 0;
-            nextButton.disabled = data.closest_cities.length < 50;
+            nextButton.disabled = data.closest_cities.length < pageSize;
         }
 
         function prevPage() {

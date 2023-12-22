@@ -108,8 +108,6 @@ def get_knn_reviews():
                 'UsedCache': True
             }
         else:
-
-            print(1)
             # 提取经纬度
             city_query = 'SELECT c.city, c.lat, c.lng FROM c'
             city_items = list(cities.query_items(city_query, enable_cross_partition_query=True))
@@ -152,16 +150,22 @@ def get_knn_reviews():
         return jsonify({'error': str(e)})
 
 
+@app.route('/clear_cache', methods=['GET'])
+def clear_cache():
+    cache.flushall()
+    return jsonify({'message': 'Cache cleared successfully'}), 200
+
+
+
 # 需求10
 @app.route('/stat/closest_cities', methods=['GET'])
 def closest_cities():
     try:
         # 计算响应时间
         start_time = time.time()
-
         city_name = request.args.get('city')
-        page_size = int(request.args.get('page_size', 50))
-        page = int(request.args.get('page', 0))
+        page_size = int(request.args.get('page_size'))
+        page = int(request.args.get('page'))
 
         cache_key = f"closest_cities:{city_name}:{page}:{page_size}"
         cached_data = cache.get(cache_key)

@@ -53,8 +53,22 @@
             margin-top: 10px;
         }
 
+        #clear-cache {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
         #used_cache {
             text-align: center;
+            margin-top: 10px;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
             margin-top: 10px;
         }
     </style>
@@ -72,7 +86,12 @@
         <input type="number" id="words" name="words" required><br><br>
 
         <button type="submit">Submit</button>
+
     </form>
+
+    <div class="button-container">
+        <button id="clear-cache">Flush Cache</button>
+    </div>
 
     <div id="result-container" style="display: none;">
         <p id="response-time"></p>
@@ -111,6 +130,32 @@
 
             request.send();
         });
+
+        document.getElementById("clear-cache").addEventListener("click", function () {
+            clearCache();
+        })
+
+        function clearCache() {
+            var request = new XMLHttpRequest();
+            request.open("GET", "/clear_cache", true); // 发送清除缓存请求的 URL
+
+            request.onload = function() {
+                if (request.status >= 200 && request.status < 400) {
+                    // 清除缓存成功
+                    alert("Cache cleared successfully.");
+                } else {
+                    // 清除缓存失败
+                    alert("Failed to clear cache.");
+                }
+            };
+
+            request.onerror = function() {
+                // 请求错误
+                alert("Request failed");
+            };
+
+            request.send();
+        }
 
         function displayResults(response) {
             var resultContainer = document.getElementById("result-container");
