@@ -7,7 +7,7 @@ from flask import Flask, request, jsonify, render_template
 from azure.cosmos import CosmosClient
 from collections import Counter
 from sklearn.neighbors import NearestNeighbors
-from flask_cors import CORS
+
 
 redis_passwd = "tuk2O44M3LfJIwJLYfI6td5qbbnCEdxHBAzCaMTiS5s="
 # "Host name" in properties
@@ -22,7 +22,6 @@ cache = redis.StrictRedis(
         )
 
 app = Flask(__name__)
-CORS(app)
 
 # Azure Cosmos DB 配置
 url = "https://tutorial-uta-cse6332.documents.azure.com:443/"
