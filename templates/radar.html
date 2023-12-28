@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>KNN Reviews Pie Chart</title>
+    <title>KNN Reviews Radar Chart</title>
     <script src="{{ url_for('static', filename='js/chart.js') }}"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
         }
 
-        h1, h2, p {
+        h1, h2 {
             text-align: center;
         }
 
@@ -75,7 +75,7 @@
     </style>
 </head>
 <body>
-    <h1>KNN Reviews Pie Chart</h1>
+    <h1>KNN Reviews Radar Chart</h1>
     <form id="knn-form">
         <label for="classes">Classes:</label>
         <input type="number" id="classes" name="classes" required><br><br>
@@ -88,12 +88,13 @@
         <button id="clear-cache">Flush Cache</button>
     </div>
 
-    <div id="result-container" style="display: none;">
-        <p id="response-time"></p>
-    </div>
-
     <div>
         <canvas id="chart"></canvas>
+    </div>
+
+    <div id="result-container" style="display: none;">
+        <p id="response-time"></p>
+        <p id="used_cache"></p>
     </div>
 
     <script>
@@ -106,7 +107,7 @@
             var classes = form.elements["classes"].value;
             var k = form.elements["k"].value;
 
-            var requestURL = "/data/knn_reviews?classes=" + classes + "&k=" + k;
+            var requestURL = "/radar_reviews?classes=" + classes + "&k=" + k;
 
             var request = new XMLHttpRequest();
             request.open("GET", requestURL, true);
@@ -114,7 +115,11 @@
             request.onload = function() {
                 if (request.status >= 200 && request.status < 400) {
                     var response = JSON.parse(request.responseText);
-                    displayData(response);
+                {#    这里记得-----------------------调用方法#}
+                {#    这里记得-----------------------调用方法#}
+                {#    这里记得-----------------------调用方法#}
+                {#    这里记得-----------------------调用方法#}
+                {#    这里记得-----------------------调用方法#}
                 } else {
                     displayError("Error: " + request.status);
                 }
@@ -130,13 +135,14 @@
         function displayData(response) {
             var resultContainer = document.getElementById("result-container");
             var responseTime = document.getElementById("response-time");
+            var used_cache = document.getElementById("used_cache");
 
             if (chart) {
                 chart.destroy();
             }
             const ctx = document.getElementById('chart').getContext('2d');
             chart = new Chart(ctx, {
-                type: 'pie',
+                type: 'radar',
                 data: {
                     labels: response.result.map(item => item.label),
                     datasets: [{
@@ -147,32 +153,10 @@
                 }
             });
 
-            chart.canvas.addEventListener('click', function (evt) {
-                var activeElements = chart.getElementsAtEventForMode(evt, 'point', chart.options);
-                if (activeElements.length > 0) {
-                    var clickedLabel = chart.data.labels[activeElements[0].index];
-                    var clickedClass = response.result.find(item => item.label === clickedLabel);
-
-                    // 显示额外信息
-                    displayClassInfo(clickedClass);
-                }
-            });
-
             responseTime.textContent = "Response Time: " + response.response_time + " ms";
+            used_cache.textContent = "Used Cache: " + response.UsedCache;
             resultContainer.style.display = "block";
         }
-
-        function displayClassInfo(clickedClass) {
-            // 根据需要调整此部分以适应显示需求
-            var resultContainer = document.getElementById("result-container");
-
-            resultContainer.innerHTML = `<p>Number of cities in this class: ${clickedClass.num}</p>
-                                         <p>Weighted average review score: ${clickedClass.score}</p>
-                                         <p>Center city's name: ${clickedClass.name}</p>
-                                         <p>Center city's state name: ${clickedClass.state}</p>`;
-
-        }
-
 
         function displayError(message) {
             var resultContainer = document.getElementById("result-container");

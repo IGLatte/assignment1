@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Get Distance</title>
+    <script src="{{ url_for('static', filename='js/chart.js') }}"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        h1 {
+            margin-top: 50px;
+        }
+
+        button {
+            padding: 4px 10px;
+            margin-top: 20px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Get Distance</h1>
+    <div>
+        <label for="city">City:</label>
+        <input type="text" id="city">
+        <label for="state">State:</label>
+        <input type="text" id="state">
+        <button onclick="getData()">Submit</button>
+        <button onclick="clearCache()">Flush Cache</button>
+
+    </div>
+    <div>
+        <canvas id="chart"></canvas>
+    </div>
+    <div id="result-container" style="display: none;">
+        <button onclick="previousPage()">Previous</button>
+        <button onclick="nextPage()">Next</button>
+        <p id="response-time"></p>
+        <p id="used_cache"></p>
+    </div>
+
+    <script>
+        // 设置默认值
+        let currentPage = 1;
+        let pageSize = 50;
+        let data = [];
+        let chart;
+
+        // 调用后端API获取数据
+        function getData() {
+            var city = document.getElementById('city').value;
+            var state = document.getElementById('state').value;
+
+            // 发送城市、州和页码到后端
+            fetch(`/distance?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}&page=${currentPage}`)
+                .then(response => response.json())
+                .then(json => {
+                    data = json;
+                    displayData();
+                })
+                .catch(error => {
+                    console.log(error);
+                    alert(error.message);
+                });
+        }
+
+        // 在柱状图中显示数据
+        function displayData() {
+            var resultContainer = document.getElementById("result-container");
+            var responseTime = document.getElementById("response-time");
+            var used_cache = document.getElementById("used_cache");
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            const ctx = document.getElementById('chart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.closest_cities.map(item => item.city),
+                    datasets: [{
+                        label: 'Distance',
+                        data: data.closest_cities.map(item => item.distance),
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            responseTime.textContent = "Response Time: " + data.response_time_ms + " ms";
+            used_cache.textContent = "Used Cache: " + data.cached;
+            resultContainer.style.display = "block";
+        }
+
+        // 上一页功能
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                getData();
+            }
+        }
+
+        // 下一页功能
+        function nextPage() {
+            currentPage++;
+            getData();
+        }
+
+
+        function clearCache() {
+            var request = new XMLHttpRequest();
+            request.open("GET", "/clear_cache", true); // 发送清除缓存请求的 URL
+
+            request.onload = function() {
+                if (request.status >= 200 && request.status < 400) {
+                    // 清除缓存成功
+                    alert("Cache cleared successfully.");
+                } else {
+                    // 清除缓存失败
+                    alert("Failed to clear cache.");
+                }
+            };
+
+            request.onerror = function() {
+                // 请求错误
+                alert("Request failed");
+            };
+
+            request.send();
+        }
+
+    </script>
+</body>
+</html>
