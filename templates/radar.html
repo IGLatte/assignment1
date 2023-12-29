@@ -88,13 +88,12 @@
         <button id="clear-cache">Flush Cache</button>
     </div>
 
-    <div>
-        <canvas id="chart"></canvas>
-    </div>
-
     <div id="result-container" style="display: none;">
         <p id="response-time"></p>
-        <p id="used_cache"></p>
+    </div>
+
+    <div>
+        <canvas id="chart"></canvas>
     </div>
 
     <script>
@@ -115,11 +114,7 @@
             request.onload = function() {
                 if (request.status >= 200 && request.status < 400) {
                     var response = JSON.parse(request.responseText);
-                {#    这里记得-----------------------调用方法#}
-                {#    这里记得-----------------------调用方法#}
-                {#    这里记得-----------------------调用方法#}
-                {#    这里记得-----------------------调用方法#}
-                {#    这里记得-----------------------调用方法#}
+                    displayData(response)
                 } else {
                     displayError("Error: " + request.status);
                 }
@@ -135,26 +130,44 @@
         function displayData(response) {
             var resultContainer = document.getElementById("result-container");
             var responseTime = document.getElementById("response-time");
-            var used_cache = document.getElementById("used_cache");
+
+            // 假设 response.result 是包含 datasets 的数组
+            var datasets = response.result;
+
+            // 创建一个数组，用于存储 Radar 图的数据集配置
+            var radarDatasets = [];
+
+            // 遍历每个 dataset
+            for (var i = 0; i < datasets.length; i++) {
+                var dataset = datasets[i];
+                // 在这里设置每个数据集的配置
+                var radarDataset = {
+                    label: dataset.label, // 数据集的标签
+                    data: dataset.word_data,   // 数据集的具体数据
+                // 可以在这里设置其他配置，例如颜色、边框宽度等
+                };
+
+                radarDatasets.push(radarDataset);
+            }
+
+            // 创建 Radar 图的配置
+            var radarConfig = {
+                type: 'radar',
+                data: {
+                    labels: response.labels,  // Radar 图的标签
+                    datasets: radarDatasets   // 将创建的数据集配置传递给 Radar 图
+                },
+                // 其他配置项
+            };
 
             if (chart) {
                 chart.destroy();
             }
             const ctx = document.getElementById('chart').getContext('2d');
-            chart = new Chart(ctx, {
-                type: 'radar',
-                data: {
-                    labels: response.result.map(item => item.label),
-                    datasets: [{
-                        label: 'Population',
-                        data: response.result.map(item => item.population),
-                        borderWidth: 1
-                    }]
-                }
-            });
+            // 使用配置创建 Radar 图
+            chart = new Chart(ctx, radarConfig);
 
             responseTime.textContent = "Response Time: " + response.response_time + " ms";
-            used_cache.textContent = "Used Cache: " + response.UsedCache;
             resultContainer.style.display = "block";
         }
 

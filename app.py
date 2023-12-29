@@ -36,8 +36,7 @@ with open("data/stopwords.txt", "r", encoding="utf-8") as file:
 
 
 # 根据城市的名字，得到reviews中的单词列表
-def get_most_words(city_list):
-    print(3)
+def get_most_words(city_list, n):
     counts = Counter()
     pattern = r'\b[a-zA-Z]+\b'  # 匹配仅包含字母的单词的正则表达式
     # 将符合条件的所有review整理成列表
@@ -49,17 +48,15 @@ def get_most_words(city_list):
         conditions = f" OR reviews.city = '{cityname}'"
         review_query += conditions
     review_items = list(reviews.query_items(review_query, enable_cross_partition_query=True))
-    print(4)
     # 统计列表中的所有word词频，过滤停用词
     for review_item in review_items:
         words = re.findall(pattern, review_item['review'].lower())
         for word in words:
             if word not in stopwords:
                 counts[word] += 1
-    most_words = counts.most_common(1)
-    print(most_words)
+    most_words = counts.most_common(n)
 
-    return most_words[0], most_words[1]
+    return most_words
 
 
 # 需求11
@@ -77,13 +74,13 @@ def radar_reviews():
 
         if cached_data:
             # Data is in cache
-            result = json.loads(cached_data)
+            cache_result = json.loads(cached_data)
             # 计算响应时间
             response_time = int((time.time() - start_time) * 1000)
             response = {
-                'result': result,
+                'result': cache_result[1],
+                'labels': cache_result[0],
                 'response_time': response_time,
-                'UsedCache': True
             }
         else:
             # 计算欧氏距离矩阵,使用kNN算法进行聚类
@@ -93,29 +90,43 @@ def radar_reviews():
             knn.fit(distances)
             _, indices = knn.kneighbors()
 
-            result = {}
+            cache_result = []
+            result = []
+            labels = []
+
+            class_word_data = []
             # 遍历每个类别
             for i in range(classes):
                 # 这个类别中的城市列表
                 class_cities = [city_items[j] for j in indices[i]]
-                word, num = get_most_words(class_cities)
+                word_list = get_most_words(class_cities, 10)
+                class_word_data.append(word_list)
+                if i == 0 :
+                    labels = [item[0] for item in word_list]
+                else:
+                    for item in word_list:
+                        if item[0] not in labels:
+                            labels.append(item[0])
 
-                result['class_' + str(i + 1)] = {
-                    'center_city': class_cities[0],
-                    'cities': class_cities,
-                    'most_popular_word': word,
-                    'num': num
-                }
-
-            # cache.setex(cache_key, 3600, json.dumps(result))
+            for i in range(len(class_word_data)):
+                word_result = [0] * len(labels)
+                for word_data in class_word_data[i]:
+                    word_result[labels.index(word_data[0])] = word_data[1]
+                result.append({
+                    'label': 'class_' + str(i + 1),
+                    'word_data': word_result
+                })
+            cache_result.append(labels)
+            cache_result.append(result)
+            cache.setex(cache_key, 3600, json.dumps(cache_result))
 
             # 计算响应时间
             response_time = int((time.time() - start_time) * 1000)
 
             response = {
                 'result': result,
-                'response_time': response_time,
-                'UsedCache': False
+                'labels': labels,
+                'response_time': response_time
             }
 
         return jsonify(response)
@@ -137,7 +148,7 @@ def redis_knn():
         city_coordinates = [(float(item['lat']), float(item['lng'])) for item in city_items]
         result = [{'city': city_items}, {'coords': city_coordinates}]
         cache.setex(cache_key, 3600, json.dumps(result))
-        print('city_coordinates and city_coordinates cached successfully!')
+        print('city_items and city_coordinates cached successfully!')
         return city_items, city_coordinates
 
 # 需求11
