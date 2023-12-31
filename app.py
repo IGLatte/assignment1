@@ -22,7 +22,7 @@ cache = redis.StrictRedis(
 
 app = Flask(__name__)
 
-# Azure Cosmos DB 配置
+# Azure Cosmos DB
 url = "https://tutorial-uta-cse6332.documents.azure.com:443/"
 key = "fSDt8pk5P1EH0NlvfiolgZF332ILOkKhMdLY6iMS2yjVqdpWx4XtnVgBoJBCBaHA8PIHnAbFY4N9ACDbMdwaEw=="
 client = CosmosClient(url, credential=key)
@@ -59,7 +59,7 @@ def get_most_words(city_list, n):
     return most_words
 
 
-# 需求11
+# 需求12
 @app.route('/radar_reviews', methods=['GET'])
 def radar_reviews():
     try:
@@ -314,7 +314,7 @@ def distance():
         city_lat, city_lng = float(target_city[0]['lat']), float(target_city[0]['lng'])
 
         # 计算与其他城市的欧拉距离保存并排序
-        query = f"SELECT c.city, c.lat, c.lng FROM c WHERE c.city != '{str(city_name)}' and c.state != '{str(state_name)}'"
+        query = f"SELECT c.city, c.lat, c.lng FROM c WHERE c.city != '{str(city_name)}'"
         result = list(cities.query_items(query, enable_cross_partition_query=True))
 
         closest_cities = sorted(result, key=lambda c: math.sqrt(
