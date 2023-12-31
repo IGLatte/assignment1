@@ -257,7 +257,7 @@ def average_score():
         city_lat, city_lng = float(target_city[0]['lat']), float(target_city[0]['lng'])
 
         # 计算与其他城市的欧拉距离保存并排序
-        query = f"SELECT c.city, c.lat, c.lng FROM c WHERE c.city != '{str(city_name)}' and c.state != '{str(state_name)}'"
+        query = f"SELECT c.city, c.lat, c.lng FROM c WHERE c.city != '{str(city_name)}'"
         result = list(cities.query_items(query, enable_cross_partition_query=True))
         closest_cities = sorted(result, key=lambda c: math.sqrt(
             (float(c['lat']) - city_lat) ** 2 + (float(c['lng']) - city_lng) ** 2))
